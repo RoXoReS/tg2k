@@ -1,18 +1,22 @@
-# Автономный Telegram-туннель для Keenetic (tg2k)
+# tg2k — Автономный Telegram-туннель для Keenetic
 
-Этот репозиторий содержит вырезанную часть оригинального проекта **[z2k](https://github.com/necronicle/z2k)** (автор: necronicle). 
+### Что это
+
+tg2k — это вырезанная часть оригинального проекта [z2k](https://github.com/necronicle/z2k) (автор: Necronicle).
 
 Из полного установщика z2k были извлечены **только компоненты, отвечающие за работу Telegram-туннеля** (`tg-mtproxy-client`), и полностью удалены все механизмы обхода блокировок (`nfqws2`, стратегии, пробы на 16 КБ и т.д.). 
 
 Такое решение позволяет использовать быстрый и стабильный туннель для Telegram, не вмешиваясь в остальной сетевой трафик роутера и не ломая доступ к «здоровым» IP-адресам.
 
-## ⚠️ Важное ограничение
+### Важное ограничение
 
 В данном репозитории лежит бинарник **только для архитектуры ARM64 (aarch64)**. 
 Он подходит для современных роутеров Keenetic: **Hero, Ultra, Giga, Hopper** (включая KN-3611) и других моделей на процессорах ARM Cortex-A. 
 На старых MIPS-роутерах (Extra, Start, Air) установка не сработает (установщик выдаст ошибку архитектуры).
 
-## 🚀 Установка
+---
+
+### Установка
 
 Подключитесь к роутеру по SSH (через встроенный терминал Keenetic или программу вроде PuTTY) и выполните одну команду:
 
@@ -26,14 +30,20 @@ curl -fsSL https://raw.githubusercontent.com/RoXoReS/tg2k/main/install.sh | sh
 3. Скачивает файлы туннеля в `/opt/tg-only/`.
 4. Настраивает NDM-хук (`90-z2k-tg-redirect.sh`), чтобы Keenetic не сбрасывал правила маршрутизации Telegram при перезагрузках или изменениях сети.
 
-## 🛠 Управление
+---
 
-*   **Запуск:** `/opt/etc/init.d/S98tg-tunnel start`
-*   **Остановка:** `/opt/etc/init.d/S98tg-tunnel stop`
-*   **Перезапуск:** `/opt/etc/init.d/S98tg-tunnel restart`
-*   **Посмотреть лог:** `tail -n 30 /tmp/z2k-log/tg-tunnel.log`
+### Управление
 
-## ⚙️ Конфигурация
+| Команда | Описание |
+| :--- | :--- |
+| `/opt/etc/init.d/S98tg-tunnel start` | Запустить туннель |
+| `/opt/etc/init.d/S98tg-tunnel stop` | Остановить туннель |
+| `/opt/etc/init.d/S98tg-tunnel restart` | Перезапустить туннель |
+| `tail -n 30 /tmp/z2k-log/tg-tunnel.log` | Посмотреть последние строки лога |
+
+---
+
+### Конфигурация
 
 Настройки хранятся в файле `/opt/tg-only/config`. 
 
@@ -51,37 +61,47 @@ TG_PROXY_USER_DISABLED=0
 /opt/etc/init.d/S98tg-tunnel restart
 ```
 
-## 📂 Структура проекта
+---
 
-```
+### Структура проекта
+
+```text
 tg2k/
-├── install.sh                   # Скрипт установки (скачивает файлы и настраивает систему)
-├── uninstall.sh                 # Скрипт полного удаления туннеля
-├── README.md                    # Документация проекта
-└── files/                       # Исходные файлы для установки
-    ├── 90-z2k-tg-redirect.sh    # NDM-хук (защищает правила iptables от сброса Keenetic)
-    ├── config                   # Файл конфигурации туннеля
-    ├── S98tg-tunnel             # Init-скрипт (управляет запуском и остановкой)
-    ├── tg-mtproxy-client        # Сам бинарник туннеля (архитектура ARM64)
-    ├── tg-tunnel-watchdog.sh    # Сторож (перезапускает туннель при падении)
-    ├── z2k-roots.pem            # Корневые сертификаты (для TLS-подключения)
-    └── z2k-tg-redirect.sh       # Библиотека правил маршрутизации (ipset + iptables)
+├── install.sh                   # Скрипт установки
+├── uninstall.sh                 # Скрипт полного удаления
+├── README.md                    # Документация
+└── files/                       # Исходные файлы
+    ├── 90-z2k-tg-redirect.sh    # NDM-хук (защита правил от сброса Keenetic)
+    ├── config                   # Файл конфигурации
+    ├── S98tg-tunnel             # Init-скрипт (управление)
+    ├── tg-mtproxy-client        # Бинарник туннеля (ARM64)
+    ├── tg-tunnel-watchdog.sh    # Сторож
+    ├── z2k-roots.pem            # Сертификаты
+    └── z2k-tg-redirect.sh       # Библиотека правил
 ```
 
-## 📂 Структура файлов
+---
 
-*   `/opt/tg-only/` — основные файлы (бинарник, конфиг, сертификаты, сторож).
-*   `/opt/etc/init.d/S98tg-tunnel` — скрипт автозапуска.
-*   `/opt/etc/ndm/netfilter.d/90-z2k-tg-redirect.sh` — хук, защищающий правила iptables от сброса системой Keenetic.
-*   `/opt/zapret2/` — вспомогательная папка, которую ожидает NDM-хук (содержит библиотеку правил).
+### Удаление
 
-## 🗑 Удаление
-
-Если вы хотите полностью удалить туннель и все его следы с роутера:
+Если вы хотите полностью удалить туннель и все его следы с роутера, выполните:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/RoXoReS/tg2k/main/uninstall.sh | sh
 ```
 
+Или выполните команды вручную:
+
+```sh
+/opt/etc/init.d/S98tg-tunnel stop
+rm -rf /opt/tg-only /opt/zapret2
+rm -f /opt/etc/init.d/S98tg-tunnel /opt/etc/ndm/netfilter.d/90-z2k-tg-redirect.sh
+```
+
 ---
-*Оригинальный проект из которого был вырезан туннель; z2k: [https://github.com/necronicle/z2k](https://github.com/necronicle/z2k)*
+
+### Лицензия
+
+Этот проект распространяется под лицензией **MIT**. 
+Оригинальный код взят из проекта [z2k](https://github.com/necronicle/z2k), автор — Necronicle. 
+Полный текст лицензии находится в файле `LICENSE` в корне репозитория.
