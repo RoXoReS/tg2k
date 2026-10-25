@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TG2K Панель управления</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* =========================================
+           БАЗОВЫЕ ЦВЕТА (Переопределяются через JS)
+           ========================================= */
+        :root {
+            --c-bg: #050505;
+            --c-panel: rgba(20, 20, 25, 0.65);
+            --c-border: rgba(255, 255, 255, 0.08);
+            --c-text: #ffffff;
+            --c-text-muted: #94a3b8;
+            --c-accent: #3b82f6;
+            --c-accent-glow: rgba(59, 130, 246, 0.5);
+            --c-danger: #ef4444;
+            --c-success: #10b981;
+            --c-input: rgba(0, 0, 0, 0.5);
+            --c-bg-image: radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15), transparent 25%);
+        }
+
+        /* Стили (оставлены без изменений для экономии места, они не менялись) */
+        body[data-style="neon"] { --s-font: 'Inter', sans-serif; --s-radius: 24px; --s-radius-sm: 12px; --s-border: 1px solid var(--c-border); --s-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1); --s-backdrop: blur(20px); }
+        body[data-style="retro"] { --s-font: 'Press Start 2P', monospace; --s-radius: 0px; --s-radius-sm: 0px; --s-border: 4px solid #000; --s-shadow: 8px 8px 0px #000; --s-backdrop: none; }
+        body[data-style="terminal"] { --s-font: 'JetBrains Mono', monospace; --s-radius: 0px; --s-radius-sm: 0px; --s-border: 1px solid var(--c-accent); --s-shadow: none; --s-backdrop: none; }
+        body[data-style="liquid"] { --s-font: 'Inter', sans-serif; --s-radius: 40px; --s-radius-sm: 20px; --s-border: 1px solid rgba(255,255,255,0.3); --s-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); --s-backdrop: blur(30px); }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        @keyframes bg-pan { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+        body { font-family: var(--s-font); background-color: var(--c-bg); color: var(--c-text); min-height: 100vh; display: flex; flex-direction: column; background-image: var(--c-bg-image); background-size: 200% 200%; animation: bg-pan 15s ease infinite; transition: background-color 0.4s, color 0.4s, font-family 0.4s; }
+        
+        body[data-style="retro"] .brand-text { font-size: 10px; line-height: 1.5; }
+        body[data-style="retro"] .status-text { font-size: 16px; }
+        body[data-style="retro"] .panel-title { font-size: 10px; }
+        body[data-style="retro"] .btn { font-size: 10px; }
+        body[data-style="retro"] .btn svg { width: 16px; height: 16px; }
+        body[data-style="retro"] input, body[data-style="retro"] .terminal-body { font-size: 16px; }
+
+        .top-bar { position: sticky; top: 0; z-index: 100; background: var(--c-panel); backdrop-filter: var(--s-backdrop); -webkit-backdrop-filter: var(--s-backdrop); border-bottom: var(--s-border); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .brand { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--c-text-muted); display: flex; align-items: center; gap: 10px; }
+        .brand .logo-dot { width: 8px; height: 8px; background: var(--c-accent); box-shadow: 0 0 10px var(--c-accent-glow); border-radius: 50%; }
+        
+        .settings-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .select-wrapper { position: relative; }
+        select { appearance: none; background: var(--c-input); border: 1px solid var(--c-border); color: var(--c-text); padding: 8px 30px 8px 12px; border-radius: var(--s-radius-sm); font-family: var(--s-font); font-size: 12px; cursor: pointer; outline: none; transition: border 0.2s; }
+        select:focus { border-color: var(--c-accent); }
+        .select-wrapper::after { content: '▼'; font-size: 8px; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--c-text-muted); pointer-events: none; }
+        
+        .btn-icon { background: var(--c-input); border: 1px solid var(--c-border); color: var(--c-text); padding: 8px 12px; border-radius: var(--s-radius-sm); cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: var(--s-font); font-size: 12px; transition: all 0.2s; }
+        .btn-icon:hover { background: var(--c-border); }
+        .btn-icon svg { width: 14px; height: 14px; fill: currentColor; }
+        
+        .ping-badge { background: var(--c-input); border: 1px solid var(--c-border); padding: 8px 12px; border-radius: var(--s-radius-sm); font-family: var(--s-font); font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 8px; color: var(--c-text-muted); cursor: pointer; transition: all 0.2s; }
+        .ping-badge:hover { border-color: var(--c-text-muted); }
+        .ping-badge.good { color: var(--c-success); border-color: var(--c-success); }
+        .ping-badge.bad { color: var(--c-danger); border-color: var(--c-danger); }
+
+        .container { width: 100%; max-width: 1000px; margin: 30px auto; padding: 0 20px; flex: 1; }
+        .main-grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+        .sidebar { display: flex; flex-direction: column; gap: 20px; }
+        .status-card { background: var(--c-panel); border: var(--s-border); border-radius: var(--s-radius-sm); padding: 24px; text-align: center; box-shadow: var(--s-shadow); backdrop-filter: var(--s-backdrop); }
+        .status-indicator { font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px; background: rgba(128, 128, 128, 0.1); margin-bottom: 15px; }
+        body[data-style="retro"] .status-indicator { font-size: 8px; border-radius: 0; border: 2px solid #000; }
+        .status-indicator .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--c-text-muted); transition: all 0.3s; }
+        body[data-style="retro"] .status-indicator .pulse { border-radius: 0; }
+        .status-indicator.online { color: var(--c-success); }
+        .status-indicator.online .pulse { background: var(--c-success); box-shadow: 0 0 12px var(--c-success); animation: pulse 2s infinite; }
+        .status-indicator.offline { color: var(--c-danger); }
+        .status-indicator.offline .pulse { background: var(--c-danger); }
+        @keyframes pulse { 0% { opacity: 0.8; } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.8; } }
+        
+        /* Добавлен --c-text-heading */
+        .status-text { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 5px; color: var(--c-text-heading, var(--c-text)); }
+        .status-desc { font-size: 13px; color: var(--c-text-muted); }
+        
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .btn { border: none; border-radius: var(--s-radius-sm); padding: 16px; font-family: var(--s-font); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; overflow: hidden; }
+        body[data-style="retro"] .btn { border: 4px solid #000; box-shadow: 4px 4px 0px #000; }
+        .btn svg { width: 24px; height: 24px; fill: currentColor; opacity: 0.8; }
+        .btn-start { background: var(--c-input); border: 1px solid var(--c-border); color: var(--c-success); }
+        .btn-start:hover:not(:disabled) { box-shadow: 0 0 20px var(--c-success); transform: translateY(-2px); }
+        body[data-style="retro"] .btn-start { background: #008800; color: #fff; border-color: #000; }
+        .btn-stop { background: var(--c-input); border: 1px solid var(--c-border); color: var(--c-danger); }
+        .btn-stop:hover:not(:disabled) { box-shadow: 0 0 20px var(--c-danger); transform: translateY(-2px); }
+        body[data-style="retro"] .btn-stop { background: #aa0000; color: #fff; border-color: #000; }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; filter: grayscale(80%); transform: none !important; box-shadow: none !important; }
+
+        .content-area { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+        .panel { background: var(--c-panel); border: var(--s-border); border-radius: var(--s-radius-sm); padding: 20px; box-shadow: var(--s-shadow); display: flex; flex-direction: column; backdrop-filter: var(--s-backdrop); position: relative; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        
+        /* Цвет заголовков панелей */
+        .panel-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--c-text-heading, var(--c-text-muted)); display: flex; align-items: center; gap: 8px; }
+        .panel-title::before { content: ''; display: block; width: 4px; height: 14px; background: var(--c-accent); border-radius: 2px; }
+        body[data-style="retro"] .panel-title::before { border-radius: 0; }
+        
+        .form-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .form-row:last-child { margin-bottom: 0; }
+        .input-group { display: flex; gap: 10px; flex: 1; }
+        
+        /* Улучшенный placeholder */
+        .input-group input { flex: 1; background: var(--c-input); border: 1px solid var(--c-border); border-radius: var(--s-radius-sm); padding: 12px 16px; color: var(--c-text); font-family: 'JetBrains Mono', monospace; font-size: 13px; transition: all 0.2s; }
+        .input-group input::placeholder { color: var(--c-text-muted); opacity: 0.6; }
+        .input-group input:focus { outline: none; border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-glow); }
+        
+        .btn-small { background: var(--c-text); color: var(--c-bg); border: none; border-radius: var(--s-radius-sm); padding: 0 20px; font-family: var(--s-font); font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        body[data-style="retro"] .btn-small { font-size: 10px; border: 2px solid #000; }
+        .btn-small:hover { opacity: 0.8; }
+        
+        .btn-reset { background: transparent; border: 1px solid var(--c-border); color: var(--c-text-muted); font-size: 11px; padding: 0 12px; }
+        .btn-reset:hover { color: var(--c-text); border-color: var(--c-text); }
+
+        .terminal-wrapper { background: #000000; border-radius: var(--s-radius-sm); border: 1px solid var(--c-border); overflow: hidden; display: flex; flex-direction: column; flex: 1; min-height: 300px; max-height: 500px; box-shadow: inset 0 4px 20px rgba(0,0,0,0.8); transition: all 0.3s; }
+        .terminal-wrapper.hidden { display: none; }
+        .terminal-header { background: #111; padding: 8px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #222; }
+        body[data-style="retro"] .terminal-header { background: #333; }
+        .mac-btn { width: 10px; height: 10px; border-radius: 50%; }
+        body[data-style="retro"] .mac-btn { border-radius: 0; }
+        .mac-red { background: #ff5f56; }
+        .mac-yellow { background: #ffbd2e; }
+        .mac-green { background: #27c93f; }
+        .terminal-body { padding: 16px; font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 12px; line-height: 1.6; color: #a8ff60; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; flex: 1; }
+        body[data-color="matrix"] .terminal-body { color: #00ff00; }
+        body[data-color="light"] .terminal-body { color: #166534; }
+        body[data-color="mario"] .terminal-body { color: #fdd835; }
+        .terminal-body::-webkit-scrollbar { width: 8px; }
+        .terminal-body::-webkit-scrollbar-track { background: #000; }
+        .terminal-body::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        
+        .icon-btn { background: transparent; border: none; color: var(--c-text-muted); cursor: pointer; padding: 4px; border-radius: 6px; transition: all 0.2s; display: flex; align-items: center; }
+        .icon-btn:hover { background: var(--c-border); color: var(--c-text); }
+        .icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+        .toast { position: fixed; top: 70px; left: 50%; transform: translate(-50%, -20px); background: var(--c-accent); color: #fff; padding: 10px 24px; border-radius: 30px; font-size: 13px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.3); opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 1000; }
+        body[data-style="retro"] .toast { border-radius: 0; border: 4px solid #000; font-size: 10px; padding: 15px; }
+        .toast.show { transform: translate(-50%, 0); opacity: 1; }
+        .toast.error { background: var(--c-danger); }
+        .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: currentColor; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* --- КОНСТРУКТОР ТЕМ --- */
+        .theme-editor {
+            display: none;
+            position: absolute;
+            top: 60px;
+            right: 24px;
+            background: var(--c-panel);
+            border: var(--s-border);
+            border-radius: var(--s-radius-sm);
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            backdrop-filter: var(--s-backdrop);
+            z-index: 1000;
+            width: 300px;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .theme-editor.active { display: flex; }
+        
+        .color-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--c-text); }
+        
+        .color-row input[type="color"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 30px;
+            height: 30px;
+            border: 2px solid var(--c-border);
+            border-radius: 50%;
+            cursor: pointer;
+            padding: 0;
+            background: transparent;
+        }
+        .color-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        .color-row input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
+        body[data-style="retro"] .color-row input[type="color"] { border-radius: 0; }
+        body[data-style="retro"] .color-row input[type="color"]::-webkit-color-swatch { border-radius: 0; }
+
+        @media (max-width: 850px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .top-bar { flex-direction: column; align-items: flex-start; padding: 15px; }
+            .settings-group { width: 100%; justify-content: space-between; }
+            .container { margin: 15px auto; padding: 0 15px; }
+            .form-row { flex-direction: column; }
+            .input-group { width: 100%; }
+            .btn-small { padding: 12px; width: 100%; }
+            .theme-editor { top: 120px; right: 15px; width: calc(100% - 30px); }
+        }
+    </style>
+</head>
+<body data-style="neon" data-color="blue">
+
+<div class="top-bar">
+    <div class="brand">
+        <div class="logo-dot"></div>
+        <span class="brand-text">TG2K</span>
+    </div>
+    
+    <div class="settings-group">
+        <div class="select-wrapper">
+            <select id="styleSelect" onchange="setStyle(this.value)">
+                <option value="neon">Стиль: Неон</option>
+                <option value="retro">Стиль: Пиксель</option>
+                <option value="terminal">Стиль: Терминал</option>
+                <option value="liquid">Стиль: Жидкость</option>
+            </select>
+        </div>
+        <div class="select-wrapper">
+            <select id="colorSelect" onchange="setColor(this.value)">
+                <option value="blue">Цвет: Синий</option>
+                <option value="cyberpunk">Цвет: Киберпанк</option>
+                <option value="matrix">Цвет: Матрица</option>
+                <option value="light">Цвет: Светлый</option>
+                <option value="mario">Цвет: Марио</option>
+                <option value="blood">Цвет: Кровь</option>
+                <option value="ocean">Цвет: Океан</option>
+                <option value="sunset">Цвет: Закат</option>
+                <option value="custom">Цвет: Свой (Настроить)</option>
+            </select>
+        </div>
+        
+        <button class="btn-icon" onclick="toggleThemeEditor()" title="Настроить свои цвета">
+            <svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8zm-5.5 9c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5S15.33 8 14.5 8zm3 4c-.83 0-1.5-.67-1.5-1.5S16.67 9 17.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+        </button>
+
+        <div id="pingBadge" class="ping-badge" onclick="checkPing(this)" title="Нажмите, чтобы проверить пинг">
+            <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+            <span id="pingText">-- ms</span>
+        </div>
+        <button class="btn-icon" onclick="toggleLogs()">
+            <svg id="logIcon" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            <span id="logBtnText">Показать логи</span>
+        </button>
+    </div>
+    
+    <!-- Всплывающая панель настройки цветов -->
+    <div id="themeEditor" class="theme-editor">
+        <div style="font-weight: bold; font-size: 14px; margin-bottom: 5px;">Настройка цветов</div>
+        
+        <div class="color-row">
+            <span>Фон (Background)</span>
+            <input type="color" id="cpBg" oninput="applyCustomColor('bg', this.value)">
+        </div>
+        <div class="color-row">
+            <span>Акцент (Accent)</span>
+            <input type="color" id="cpAccent" oninput="applyCustomColor('accent', this.value)">
+        </div>
+        <div class="color-row">
+            <span>Панели (Panels)</span>
+            <input type="color" id="cpPanel" oninput="applyCustomColor('panel', this.value)">
+        </div>
+        <div class="color-row">
+            <span>Обычный текст</span>
+            <input type="color" id="cpText" oninput="applyCustomColor('text', this.value)">
+        </div>
+        <div class="color-row">
+            <span>Заголовки (Heading)</span>
+            <input type="color" id="cpHeading" oninput="applyCustomColor('heading', this.value)">
+        </div>
+        
+        <button class="btn-small" style="margin-top: 10px;" onclick="saveCustomTheme()">Сохранить как свою тему</button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="main-grid">
+        <div class="sidebar">
+            <div class="status-card">
+                <div id="statusIndicator" class="status-indicator">
+                    <div class="pulse"></div>
+                    <span id="statusLabel">Проверка...</span>
+                </div>
+                <div class="status-text" id="statusTitle">Загрузка</div>
+                <div class="status-desc">Состояние туннеля</div>
+            </div>
+
+            <div class="controls-grid">
+                <button id="btnStart" class="btn btn-start" onclick="doAction('start', this)" disabled>
+                    <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    Включить
+                </button>
+                <button id="btnStop" class="btn btn-stop" onclick="doAction('stop', this)" disabled>
+                    <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    Выключить
+                </button>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">Настройки подключения</div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="input-group">
+                        <input type="text" id="newAddr" placeholder="wss://relay.telegram.org/ws" spellcheck="false">
+                        <button class="btn-small btn-reset" onclick="resetAddr(this)" title="Сбросить на дефолтный">
+                            <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor;vertical-align:middle;"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                        </button>
+                    </div>
+                    <button class="btn-small" onclick="setAddr(this)">Применить</button>
+                </div>
+
+                <div class="form-row">
+                    <div class="input-group">
+                        <input type="text" id="newSecret" placeholder="Секрет (Secret) — если требуется" spellcheck="false">
+                    </div>
+                </div>
+            </div>
+
+            <div id="logsPanel" class="panel" style="flex: 1;">
+                <div class="panel-header">
+                    <div class="panel-title">Системный журнал</div>
+                    <button class="icon-btn" onclick="showLogs(this)" title="Обновить логи">
+                        <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                    </button>
+                </div>
+                <div id="terminalWrapper" class="terminal-wrapper hidden">
+                    <div class="terminal-header">
+                        <div class="mac-btn mac-red"></div>
+                        <div class="mac-btn mac-yellow"></div>
+                        <div class="mac-btn mac-green"></div>
+                    </div>
+                    <div id="logsBox" class="terminal-body">Инициализация...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast">Готово</div>
+
+<script>
+    const presets = {
+        blue: { bg: '#050505', panel: 'rgba(20, 20, 25, 0.65)', border: 'rgba(255, 255, 255, 0.08)', text: '#ffffff', heading: '#ffffff', muted: '#94a3b8', accent: '#3b82f6', glow: 'rgba(59, 130, 246, 0.5)', danger: '#ef4444', success: '#10b981', input: 'rgba(0, 0, 0, 0.5)', bgimg: 'radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15), transparent 25%), radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1), transparent 25%)' },
+        cyberpunk: { bg: '#0d0214', panel: 'rgba(25, 5, 35, 0.7)', border: 'rgba(255, 0, 128, 0.2)', text: '#fdf4ff', heading: '#fdf4ff', muted: '#d8b4fe', accent: '#d946ef', glow: 'rgba(217, 70, 239, 0.5)', danger: '#f43f5e', success: '#facc15', input: 'rgba(0, 0, 0, 0.6)', bgimg: 'radial-gradient(circle at 10% 20%, rgba(217, 70, 239, 0.15), transparent 30%), radial-gradient(circle at 90% 80%, rgba(250, 204, 21, 0.1), transparent 30%)' },
+        matrix: { bg: '#000000', panel: 'rgba(0, 15, 0, 0.8)', border: 'rgba(0, 255, 0, 0.2)', text: '#00ff00', heading: '#00ff00', muted: '#008800', accent: '#00ff00', glow: 'rgba(0, 255, 0, 0.5)', danger: '#ff0000', success: '#00ff00', input: 'rgba(0, 10, 0, 0.8)', bgimg: 'none' },
+        light: { bg: '#f1f5f9', panel: 'rgba(255, 255, 255, 0.85)', border: 'rgba(0, 0, 0, 0.1)', text: '#0f172a', heading: '#0f172a', muted: '#64748b', accent: '#2563eb', glow: 'rgba(37, 99, 235, 0.3)', danger: '#dc2626', success: '#16a34a', input: 'rgba(255, 255, 255, 0.9)', bgimg: 'radial-gradient(circle at 15% 50%, rgba(37, 99, 235, 0.1), transparent 25%)' },
+        mario: { bg: '#1a1a1a', panel: 'rgba(40, 40, 40, 0.9)', border: '#e52521', text: '#ffffff', heading: '#fdd835', muted: '#fdd835', accent: '#e52521', glow: 'rgba(229, 37, 33, 0.5)', danger: '#e52521', success: '#43b047', input: 'rgba(0, 0, 0, 0.6)', bgimg: 'radial-gradient(circle at 10% 20%, rgba(229, 37, 33, 0.2), transparent 30%), radial-gradient(circle at 90% 80%, rgba(67, 176, 71, 0.2), transparent 30%)' },
+        blood: { bg: '#0a0000', panel: 'rgba(20, 0, 0, 0.8)', border: 'rgba(255, 0, 0, 0.2)', text: '#ffcccc', heading: '#ffcccc', muted: '#aa4444', accent: '#cc0000', glow: 'rgba(204, 0, 0, 0.6)', danger: '#ff0000', success: '#00cc00', input: 'rgba(10, 0, 0, 0.9)', bgimg: 'radial-gradient(circle at 50% 10%, rgba(200, 0, 0, 0.15), transparent 40%)' },
+        ocean: { bg: '#001220', panel: 'rgba(0, 30, 50, 0.7)', border: 'rgba(0, 150, 255, 0.2)', text: '#e0f7fa', heading: '#e0f7fa', muted: '#80cbc4', accent: '#00bcd4', glow: 'rgba(0, 188, 212, 0.5)', danger: '#ff5252', success: '#69f0ae', input: 'rgba(0, 15, 30, 0.7)', bgimg: 'radial-gradient(circle at 10% 80%, rgba(0, 188, 212, 0.15), transparent 30%), radial-gradient(circle at 90% 20%, rgba(0, 150, 255, 0.1), transparent 30%)' },
+        sunset: { bg: '#1a0b12', panel: 'rgba(40, 20, 30, 0.75)', border: 'rgba(255, 100, 0, 0.2)', text: '#ffe0b2', heading: '#ffe0b2', muted: '#ffab91', accent: '#ff7043', glow: 'rgba(255, 112, 67, 0.5)', danger: '#d32f2f', success: '#81c784', input: 'rgba(20, 5, 10, 0.7)', bgimg: 'radial-gradient(circle at 20% 90%, rgba(255, 112, 67, 0.15), transparent 35%), radial-gradient(circle at 80% 10%, rgba(255, 193, 7, 0.1), transparent 35%)' }
+    };
+
+    function setStyle(styleName) {
+        document.body.setAttribute('data-style', styleName);
+        localStorage.setItem('tg2k-style', styleName);
+        document.getElementById('styleSelect').value = styleName;
+    }
+
+    function setColor(colorName) {
+        document.body.setAttribute('data-color', colorName);
+        localStorage.setItem('tg2k-color', colorName);
+        document.getElementById('colorSelect').value = colorName;
+        
+        if (colorName === 'custom') {
+            loadCustomTheme();
+        } else if (presets[colorName]) {
+            applyColors(presets[colorName]);
+        }
+    }
+
+    function applyColors(c) {
+        const root = document.documentElement.style;
+        root.setProperty('--c-bg', c.bg);
+        root.setProperty('--c-panel', c.panel);
+        root.setProperty('--c-border', c.border);
+        root.setProperty('--c-text', c.text);
+        root.setProperty('--c-text-heading', c.heading || c.text);
+        root.setProperty('--c-text-muted', c.muted);
+        root.setProperty('--c-accent', c.accent);
+        root.setProperty('--c-accent-glow', c.glow);
+        root.setProperty('--c-danger', c.danger);
+        root.setProperty('--c-success', c.success);
+        root.setProperty('--c-input', c.input);
+        root.setProperty('--c-bg-image', c.bgimg);
+        
+        if(c.bg.startsWith('#')) document.getElementById('cpBg').value = c.bg;
+        if(c.accent.startsWith('#')) document.getElementById('cpAccent').value = c.accent;
+        if(c.text.startsWith('#')) document.getElementById('cpText').value = c.text;
+        if(c.heading && c.heading.startsWith('#')) document.getElementById('cpHeading').value = c.heading;
+        
+        if(c.panel.includes('rgba')) document.getElementById('cpPanel').value = '#1a1a1a';
+        else document.getElementById('cpPanel').value = c.panel;
+    }
+
+    let customColors = {};
+    
+    function toggleThemeEditor() {
+        const editor = document.getElementById('themeEditor');
+        editor.classList.toggle('active');
+        if (editor.classList.contains('active')) {
+            const style = getComputedStyle(document.body);
+            const bg = style.getPropertyValue('--c-bg').trim();
+            const accent = style.getPropertyValue('--c-accent').trim();
+            const text = style.getPropertyValue('--c-text').trim();
+            const heading = style.getPropertyValue('--c-text-heading').trim();
+            
+            if(bg.startsWith('#')) document.getElementById('cpBg').value = bg;
+            if(accent.startsWith('#')) document.getElementById('cpAccent').value = accent;
+            if(text.startsWith('#')) document.getElementById('cpText').value = text;
+            if(heading.startsWith('#')) document.getElementById('cpHeading').value = heading;
+        }
+    }
+
+    function applyCustomColor(key, hex) {
+        customColors[key] = hex;
+        const root = document.documentElement.style;
+        
+        if (key === 'bg') {
+            root.setProperty('--c-bg', hex);
+            root.setProperty('--c-bg-image', `radial-gradient(circle at 50% 50%, ${hex}22, transparent 50%)`);
+        }
+        if (key === 'accent') {
+            root.setProperty('--c-accent', hex);
+            root.setProperty('--c-accent-glow', hex + '80');
+        }
+        if (key === 'text') {
+            root.setProperty('--c-text', hex);
+        }
+        if (key === 'heading') {
+            root.setProperty('--c-text-heading', hex);
+        }
+        if (key === 'panel') {
+            root.setProperty('--c-panel', hex + 'cc');
+            root.setProperty('--c-input', hex + '99');
+            root.setProperty('--c-border', '#ffffff22');
+        }
+        
+        document.getElementById('colorSelect').value = 'custom';
+        document.body.setAttribute('data-color', 'custom');
+    }
+
+    function saveCustomTheme() {
+        localStorage.setItem('tg2k-custom-colors', JSON.stringify(customColors));
+        toast('Своя тема сохранена!');
+    }
+
+    function loadCustomTheme() {
+        const saved = localStorage.getItem('tg2k-custom-colors');
+        if (saved) {
+            try {
+                customColors = JSON.parse(saved);
+                for (const [key, hex] of Object.entries(customColors)) {
+                    applyCustomColor(key, hex);
+                }
+            } catch (e) {
+                console.error("Ошибка загрузки своей темы", e);
+            }
+        } else {
+            toast('Вы еще не создали свою тему', true);
+        }
+    }
+
+    // --- Основная логика ---
+    let logsHidden = true;
+    function toggleLogs() {
+        logsHidden = !logsHidden;
+        const wrapper = document.getElementById('terminalWrapper');
+        const btnText = document.getElementById('logBtnText');
+        
+        if (logsHidden) {
+            wrapper.classList.add('hidden');
+            btnText.textContent = 'Показать логи';
+        } else {
+            wrapper.classList.remove('hidden');
+            btnText.textContent = 'Скрыть логи';
+            showLogs();
+        }
+    }
+
+    const statusIndicator = document.getElementById('statusIndicator');
+    const statusLabel = document.getElementById('statusLabel');
+    const statusTitle = document.getElementById('statusTitle');
+    const btnStart = document.getElementById('btnStart');
+    const btnStop = document.getElementById('btnStop');
+    const logsBox = document.getElementById('logsBox');
+    const toastEl = document.getElementById('toast');
+    const pingBadge = document.getElementById('pingBadge');
+    const pingText = document.getElementById('pingText');
+    const newAddr = document.getElementById('newAddr');
+    const newSecret = document.getElementById('newSecret');
+
+    function toast(msg, isError = false) {
+        toastEl.textContent = msg;
+        toastEl.className = 'toast show' + (isError ? ' error' : '');
+        setTimeout(() => toastEl.className = 'toast', 3000);
+    }
+
+    async function api(q) {
+        const res = await fetch('/control.cgi?' + q + '&_=' + Date.now());
+        return await res.text();
+    }
+
+    async function loadAddr() {
+        try {
+            const text = await api('getaddr');
+            const lines = text.trim().split('\n');
+            let url = '', secret = '';
+            lines.forEach(line => {
+                if (line.startsWith('URL:')) url = line.substring(4);
+                if (line.startsWith('SECRET:')) secret = line.substring(7);
+            });
+            newAddr.value = url;
+            newSecret.value = secret;
+        } catch(e) {
+            newAddr.value = 'Ошибка';
+        }
+    }
+
+    async function checkPing(btn) {
+        pingText.textContent = '...';
+        pingBadge.className = 'ping-badge';
+        try {
+            const text = await api('ping');
+            if (text.includes('OK')) {
+                pingText.textContent = text.split(':')[1].trim();
+                pingBadge.classList.add('good');
+            } else {
+                pingText.textContent = 'Fail';
+                pingBadge.classList.add('bad');
+            }
+        } catch (e) {
+            pingText.textContent = 'Err';
+            pingBadge.classList.add('bad');
+        }
+    }
+
+    async function refreshStatus() {
+        try {
+            const text = await api('status');
+            const running = text.includes('RUNNING');
+            if (running) {
+                statusIndicator.className = 'status-indicator online';
+                statusLabel.textContent = 'Активен';
+                statusTitle.textContent = 'Онлайн';
+                btnStart.disabled = true;
+                btnStop.disabled = false;
+            } else {
+                statusIndicator.className = 'status-indicator offline';
+                statusLabel.textContent = 'Отключен';
+                statusTitle.textContent = 'Офлайн';
+                btnStart.disabled = false;
+                btnStop.disabled = true;
+            }
+        } catch (e) {
+            statusIndicator.className = 'status-indicator offline';
+            statusLabel.textContent = 'Ошибка';
+            statusTitle.textContent = 'Нет связи';
+        }
+    }
+
+    async function doAction(action, btn) {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<div class="spinner" style="color:currentColor;"></div>';
+        btn.disabled = true;
+        try {
+            const text = await api(action);
+            if (text.includes('OK')) toast(action === 'start' ? 'Туннель запущен' : 'Туннель остановлен');
+            else toast(text.replace('ERROR: ', ''), true);
+        } catch (e) {
+            toast('Ошибка сети', true);
+        } finally {
+            btn.innerHTML = orig;
+            await refreshStatus();
+            if (!logsHidden) showLogs();
+        }
+    }
+
+    async function setAddr(btn) {
+        const val = newAddr.value.trim();
+        const secret = newSecret.value.trim();
+
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-top-color:black;"></div>';
+        btn.disabled = true;
+
+        try {
+            const text = await api('setaddr&addr=' + val + '&secret=' + secret);
+            if (text.includes('OK')) {
+                toast('Настройки сохранены');
+                setTimeout(async () => {
+                    await refreshStatus();
+                    await loadAddr();
+                    await checkPing();
+                    if (!logsHidden) showLogs();
+                }, 1000);
+            } else {
+                toast(text, true);
+            }
+        } catch (e) {
+            toast('Ошибка сети', true);
+        } finally {
+            btn.innerHTML = orig;
+            btn.disabled = false;
+        }
+    }
+
+    async function resetAddr(btn) {
+        if (!confirm('Сбросить адрес на дефолтный?')) return;
+        
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;"></div>';
+        btn.disabled = true;
+
+        try {
+            const text = await api('resetaddr');
+            if (text.includes('OK')) {
+                toast('Адрес сброшен');
+                setTimeout(async () => {
+                    await loadAddr();
+                    await checkPing();
+                    if (!logsHidden) showLogs();
+                }, 1000);
+            } else {
+                toast(text, true);
+            }
+        } catch (e) {
+            toast('Ошибка сети', true);
+        } finally {
+            btn.innerHTML = orig;
+            btn.disabled = false;
+        }
+    }
+
+    async function showLogs(btn = null) {
+        if (logsHidden) return;
+        let orig;
+        if (btn) {
+            orig = btn.innerHTML;
+            btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;"></div>';
+        }
+        try {
+            const text = await api('logs');
+            const isBottom = logsBox.scrollHeight - logsBox.clientHeight <= logsBox.scrollTop + 30;
+            logsBox.textContent = text;
+            if (isBottom || btn !== null) logsBox.scrollTop = logsBox.scrollHeight;
+        } catch (e) {
+            logsBox.textContent = 'Ошибка чтения логов';
+        } finally {
+            if (btn && orig) btn.innerHTML = orig;
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+        const savedStyle = localStorage.getItem('tg2k-style') || 'neon';
+        const savedColor = localStorage.getItem('tg2k-color') || 'blue';
+        
+        setStyle(savedStyle);
+        setColor(savedColor);
+
+        await loadAddr();
+        await checkPing();
+        await refreshStatus();
+    });
+</script>
+</body>
+</html>
