@@ -160,7 +160,7 @@ z2k_tg_remove_legacy_rules() {
 # path immediately instead of riding dead direct-to-DC entries.
 z2k_tg_flush_conntrack() {
     for _c in $Z2K_TG_CIDRS; do
-        conntrack -D -d "$_c" 2>/dev/null || true
+        conntrack -D -d "$_c" >/dev/null 2>&1 || true
     done
 }
 
